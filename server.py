@@ -24,9 +24,14 @@ AIP_URLS = {
     "GCRR": {  # Lanzarote
         "datos_aerodromo": "https://aip.enaire.es/AIP/contenido_AIP/AD/AD2/GCRR/LE_AD_2_GCRR_en.pdf",
         "STAR_03": "https://aip.enaire.es/AIP/contenido_AIP/AD/AD2/GCRR/LE_AD_2_GCRR_STAR_1_en.pdf",
-        "STAR_21": "https://aip.enaire.es/AIP/contenido_AIP/AD/AD2/GCRR/LE_AD_2_GCRR_STAR_2_en.pdf",
+        "STAR_03_rnva1_gnss": "https://aip.enaire.es/AIP/contenido_AIP/AD/AD2/GCRR/LE_AD_2_GCRR_STAR_2_en.pdf",
+        "STAR_21": "https://aip.enaire.es/AIP/contenido_AIP/AD/AD2/GCRR/LE_AD_2_GCRR_STAR_3_en.pdf",
+        "STAR_21_rnva1_gnss": "https://aip.enaire.es/AIP/contenido_AIP/AD/AD2/GCRR/LE_AD_2_GCRR_STAR_4_en.pdf",
         "SID_03": "https://aip.enaire.es/AIP/contenido_AIP/AD/AD2/GCRR/LE_AD_2_GCRR_SID_1_en.pdf",
-        "SID_21": "https://aip.enaire.es/AIP/contenido_AIP/AD/AD2/GCRR/LE_AD_2_GCRR_SID_2_en.pdf"
+        "SID_03_rnav1_gnss": "https://aip.enaire.es/AIP/contenido_AIP/AD/AD2/GCRR/LE_AD_2_GCRR_SID_2_en.pdf",
+        "SID_03_rnav1_dme_dme": "https://aip.enaire.es/AIP/contenido_AIP/AD/AD2/GCRR/LE_AD_2_GCRR_SID_3_en.pdf",
+        "SID_21": "https://aip.enaire.es/AIP/contenido_AIP/AD/AD2/GCRR/LE_AD_2_GCRR_SID_4_en.pdf",
+        "SID_21_rnav1": "https://aip.enaire.es/AIP/contenido_AIP/AD/AD2/GCRR/LE_AD_2_GCRR_SID_5_en.pdf"
     }
 }
 
