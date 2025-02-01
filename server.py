@@ -82,7 +82,6 @@ def procesar_pdf():
         return jsonify({"error": f"Error al procesar el PDF: {str(e)}"}), 500
 
 import os
-
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 5000))  # Usar el puerto que Render asigna automáticamente
     app.run(host="0.0.0.0", port=port)
