@@ -2,6 +2,8 @@ from flask import Flask, request, jsonify
 import requests
 import io
 import pdfplumber
+import re
+import os
 
 app = Flask(__name__)
 
@@ -35,7 +37,6 @@ AIP_URLS = {
     }
 }
 
-
 @app.route("/procesar_pdf", methods=["POST"])
 def procesar_pdf():
     try:
@@ -67,14 +68,12 @@ def procesar_pdf():
         # Extraer texto y buscar la consulta
         resultados = []
         with pdfplumber.open(pdf_file) as pdf:
-            import re
-
-for page_num, page in enumerate(pdf.pages):
-    text = page.extract_text()
-    if text:
-        clean_text = re.sub(r'\s+', ' ', text.lower())  # Normalizar espacios y convertir a minúsculas
-        if query.lower() in clean_text:
-            resultados.append(f"Página {page_num + 1}: {text[:500]}...")
+            for page_num, page in enumerate(pdf.pages):
+                text = page.extract_text()
+                if text:
+                    clean_text = re.sub(r'\s+', ' ', text.lower())  # Normalizar espacios y convertir a minúsculas
+                    if query.lower() in clean_text:
+                        resultados.append(f"Página {page_num + 1}: {text[:500]}...")
 
         # Devolver resultados
         if not resultados:
@@ -85,8 +84,6 @@ for page_num, page in enumerate(pdf.pages):
     except Exception as e:
         return jsonify({"error": f"Error al procesar el PDF: {str(e)}"}), 500
 
-import os
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 5000))  # Usar el puerto que Render asigna automáticamente
     app.run(host="0.0.0.0", port=port)
-
