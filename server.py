@@ -67,10 +67,14 @@ def procesar_pdf():
         # Extraer texto y buscar la consulta
         resultados = []
         with pdfplumber.open(pdf_file) as pdf:
-            for page_num, page in enumerate(pdf.pages):
-                text = page.extract_text()
-                if text and query.lower() in text.lower():
-                    resultados.append(f"Página {page_num + 1}: {text[:500]}...")
+            import re
+
+for page_num, page in enumerate(pdf.pages):
+    text = page.extract_text()
+    if text:
+        clean_text = re.sub(r'\s+', ' ', text.lower())  # Normalizar espacios y convertir a minúsculas
+        if query.lower() in clean_text:
+            resultados.append(f"Página {page_num + 1}: {text[:500]}...")
 
         # Devolver resultados
         if not resultados:
