@@ -67,7 +67,6 @@ def procesar_pdf():
     try:
         print("📢 Nueva solicitud recibida")
 
-        # ✅ Verificar si la solicitud contiene JSON válido
         if not request.is_json:
             print("❌ Error: La solicitud no es JSON")
             return jsonify({"error": "La solicitud debe ser JSON"}), 400
@@ -85,7 +84,6 @@ def procesar_pdf():
 
         resultados = {}
 
-        # ✅ Buscar en TODOS los PDFs
         for nombre_pdf, pdf_url in PDF_URLS.items():
             print(f"📥 Descargando {nombre_pdf} desde {pdf_url}")
             pdf_file = descargar_pdf_drive(pdf_url)
@@ -94,16 +92,23 @@ def procesar_pdf():
                 print(f"⚠ No se pudo descargar {nombre_pdf}")
                 continue
 
-            coincidencias = []
-            with pdfplumber.open(pdf_file) as pdf:
-                for page_num, page in enumerate(pdf.pages):
-                    text = page.extract_text()
-                    if text and query.lower() in text.lower():
-                        print(f"✅ Coincidencia en {nombre_pdf}, página {page_num + 1}")
-                        coincidencias.append(f"Página {page_num + 1}: {text[:500]}...")
+            print(f"📂 Intentando abrir {nombre_pdf} con pdfplumber")
+            try:
+                with pdfplumber.open(pdf_file) as pdf:
+                    print(f"✅ PDF abierto correctamente: {nombre_pdf}")
 
-            if coincidencias:
-                resultados[nombre_pdf] = coincidencias
+                    coincidencias = []
+                    for page_num, page in enumerate(pdf.pages):
+                        text = page.extract_text()
+                        if text and query.lower() in text.lower():
+                            print(f"✅ Coincidencia en {nombre_pdf}, página {page_num + 1}")
+                            coincidencias.append(f"Página {page_num + 1}: {text[:500]}...")
+
+                if coincidencias:
+                    resultados[nombre_pdf] = coincidencias
+            except Exception as pdf_error:
+                print(f"💥 ERROR en pdfplumber: {pdf_error}")
+                return jsonify({"error": f"Fallo al leer el PDF: {str(pdf_error)}"}), 500
 
         if not resultados:
             print("❌ No se encontraron coincidencias en ningún PDF")
@@ -113,8 +118,9 @@ def procesar_pdf():
         return jsonify({"resumen": f"Se encontraron coincidencias en {len(resultados)} documentos.", "detalles": resultados})
 
     except Exception as e:
-        print(f"💥 Error interno del servidor: {e}")
+        print(f"💥 ERROR GENERAL en el servidor: {e}")
         return jsonify({"error": f"Error interno del servidor: {str(e)}"}), 500
+
 
 
 if __name__ == "__main__":
