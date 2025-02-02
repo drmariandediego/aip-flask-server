@@ -1,55 +1,66 @@
 from flask import Flask, request, jsonify
-from flask_cors import CORS  # <-- Importa CORS
 import requests
 import io
 import pdfplumber
-import re
-from pdf2image import convert_from_bytes
-import pytesseract
-import os
+import gdown
+from flask_cors import CORS  # Permite acceso desde GPT
 
 app = Flask(__name__)
-CORS(app)  # <-- Habilita CORS en toda la API
+CORS(app)
 
-# Diccionario con las URLs de los aeropuertos y sus categorías
-AIP_URLS = {
-    "GCLP": {
-        "datos_aerodromo": "https://aip.enaire.es/AIP/contenido_AIP/AD/AD2/GCLP/LE_AD_2_GCLP_en.pdf",
-        "STAR_03L_03R": "https://aip.enaire.es/AIP/contenido_AIP/AD/AD2/GCLP/LE_AD_2_GCLP_STAR_1_en.pdf",
-        "STAR_21L_21R": "https://aip.enaire.es/AIP/contenido_AIP/AD/AD2/GCLP/LE_AD_2_GCLP_STAR_2_en.pdf",
-        "SID_03L_03R": "https://aip.enaire.es/AIP/contenido_AIP/AD/AD2/GCLP/LE_AD_2_GCLP_SID_1_en.pdf",
-        "SID_21L_21R": "https://aip.enaire.es/AIP/contenido_AIP/AD/AD2/GCLP/LE_AD_2_GCLP_SID_2_en.pdf"
-    },
-    "GCRR": {
-        "datos_aerodromo": "https://aip.enaire.es/AIP/contenido_AIP/AD/AD2/GCRR/LE_AD_2_GCRR_en.pdf",
-        "STAR_03": "https://aip.enaire.es/AIP/contenido_AIP/AD/AD2/GCRR/LE_AD_2_GCRR_STAR_1_en.pdf",
-        "SID_03": "https://aip.enaire.es/AIP/contenido_AIP/AD/AD2/GCRR/LE_AD_2_GCRR_SID_1_en.pdf"
-    }
+# 🔹 Reemplaza esta parte con la lista de enlaces generados en Google Colab 🔹
+PDF_URLS = {
+   "LE_AD_2_GCLP_en.pdf": "https://drive.google.com/uc?id=1pEzRS8aIk4BpN6nat8Cb__pyCMrL28Am",
+"LE_AD_2_GCLP_SID_1_en.pdf": "https://drive.google.com/uc?id=1Ge9W-WF3QFp1aGuHCORUjFLQpWA40a4m",
+"LE_AD_2_GCLP_SID_2_en.pdf": "https://drive.google.com/uc?id=12fal0nG892HIJEL-E-dBIvtvhLYKyDUv",
+"LE_AD_2_GCLP_STAR_1_en.pdf": "https://drive.google.com/uc?id=1XqpdvCsg_cErLHtdso2JjkzyDO29pUhu",
+"LE_AD_2_GCLP_STAR_2_en.pdf": "https://drive.google.com/uc?id=1e3OTC6E03m1e-D-Q3Xx4SjhKDSQm4LwR",
+"LE_AD_2_GCLP_VAC_1_en.pdf": "https://drive.google.com/uc?id=1f1Cc_gns262A_P0XK1JPMynMslBCIZU_",
+"LE_AD_2_GCLP_VAC_2_en.pdf": "https://drive.google.com/uc?id=1F79rrQNFU-pkieQ-6SDwOkcXod3XDunO",
+"PCATS_CNS_GCCC_6.0.pdf": "https://drive.google.com/uc?id=1ZIETC4LhJ85M_M4mt6Uku7EqSXMTAp_N",
+"Doc_4444 Amdt 8 EASA PANS ATM Checklist v.5 final Feb 2021 Oficial.pdf": "https://drive.google.com/uc?id=174GptiLug1wsBUkd6XRuK3FM6v8ZDe7K",
+"532F14_2024-12-02_11.40.37_EAR-for-Standardised-European-Rules-of-the-Air-SERA.pdf": "https://drive.google.com/uc?id=1O87WiV9Ph3ktmiTpjfBqFulfde2ujjMO",
+"GCCC-GCRR-v.6.4.pdf": "https://drive.google.com/uc?id=1pkjeMeb8Otd8hCPvPMDwLSPBF7Y8h5Np",
+"20240208_CIN_LOA GCCC-GCRR_Modificación anexos D y F_v1.0.pdf": "https://drive.google.com/uc?id=1LtsvYEEDvzjRZl691uLKl6q0b4bXml0s",
+"GCCC-GCFV_v7.0.pdf": "https://drive.google.com/uc?id=1Eqpg1cECsxbX4txG0JmfVemnnJS1KMC_",
+"241216_CIN_LoA GCCC-GCFV_v1.1.pdf": "https://drive.google.com/uc?id=1LkzZ5FfNgfzbO458r8QBb-vTzFA5lYOO",
+"20240207_CIN_LoA GCCC-GCFV.pdf": "https://drive.google.com/uc?id=1H0WEs8DcSpHS_DqOVYoJcmJ8Td2CoO4G",
+"GCCC-GCLA_v.6.2.pdf": "https://drive.google.com/uc?id=13HWRjZR3QIPdkHkHO1u6ijt1aLUMnB7a",
+"GCTS-GCXO v.5.0.pdf": "https://drive.google.com/uc?id=1edOeD8GkbPo3oTRv5KQCZfgYW9gdS-KV",
+"GCTS-GCGM-v7. 1.pdf": "https://drive.google.com/uc?id=1sctVp_cO4Rfm9HCM083EUs4a4HDLowxV",
+"GCCC-GCHI AFIS - v3.3.pdf": "https://drive.google.com/uc?id=1GVL8SR5ccVPyeoq8wpMTev5OjQdQ4t36",
+"GCCC-GCHI TWR- v3.3.pdf": "https://drive.google.com/uc?id=1vChNwdewfXPIHXvYeicFWIMW05hjfvmk",
+"GCCC-GCLP- v8.0.pdf": "https://drive.google.com/uc?id=1gI9L-twsbPrVoOR-CT_sDAGeejxkIACg",
+"GCCC-GCXO v.5.3.pdf": "https://drive.google.com/uc?id=1jOWLM_jBW1-MbwrhoGJrMaEyHZNeDSpe",
+"GCCC-GCTS v.6.1.pdf": "https://drive.google.com/uc?id=1WxrxuYhiT5EXFsu1ZAWDdkB-Ley3y5OR",
+"C OP ATS n3 entre GCCC_GCLP y Helipuerto Hospital Insular de las Palmas de Gran Canaria.pdf": "https://drive.google.com/uc?id=1BCdM-gaj3vYObk8nDLCo8LNmZA8jD3q0",
+"C OP ATS n4 entre GCCC y Helipuerto del Cabildo de Gran Canaria en Artenara.pdf": "https://drive.google.com/uc?id=1MSMUBZxlQryWt-95kEyd5nQTex7zz30m",
+"C OP ATS n6 entre GCCC-GCLA-CABILDO (BELLIDO-SAN MAURO).pdf": "https://drive.google.com/uc?id=1kKY71oojC8mlu3vdjabT0ni6kTPQKvFn",
+"C OPER ATS Nº1 ADFR DIVATS GANDO JSVICA_.pdf": "https://drive.google.com/uc?id=1uHGb_xKnIibEoy5DgnH-jR1oT4fSLd5X",
+"C OP ATS n7 entre GCCC_GCLP y la Base Aerea de Gando.pdf": "https://drive.google.com/uc?id=1v3oGKxJwSsmDxylNIDY55WW956GXN6qP",
+"C OP ATS n3 entre AMLAN_GCCC y GCRR.pdf": "https://drive.google.com/uc?id=1WPnxjMeSb5lNlYkJGdWxdKEGvGAfDMQu",
+"C OP ATS n3 entre GCCC_GCLP_PLOCAN.pdf": "https://drive.google.com/uc?id=1Fgr9FX22w934TF_9maEBlX4QpYXmXB8Q",
+"C OP ATS n2 entre GCCC y Helipuerto Palmas Port.pdf": "https://drive.google.com/uc?id=1CvLjfwdfdQ_QJYxiU-Wdvvrzx6a5iwKA",
+"C OP ATS N6_GCCC_GCLP_GCLB.pdf": "https://drive.google.com/uc?id=17f-aO9fkk4p0eydlFumo4Wtp4IUKJQ1Q",
+"C OP ATS n2 entre GCCC y BHELMA VI.pdf": "https://drive.google.com/uc?id=1Q6wrogms4g6cpoU6z0Df6Fd6WE4zQZmC",
+"20240826_CIN_LoA División ATS-ECAO_HERMES.pdf": "https://drive.google.com/uc?id=17co30xiIc9lTDMczzkvVxkk-DTJ7jJha",
+"LoA DIVATS Región Canaria y ECAO Las Palmas_v 5.1.pdf": "https://drive.google.com/uc?id=1QZuJz6s1_E0jK2AE93bphOTwVl-kyrVs",
+"20240312_CIN_LoA División ATS-ECAO_MARSA, NR.05 y otros.pdf": "https://drive.google.com/uc?id=1GAz_1O7v5OACRPwWHu8evs_Gp3p6mHz8",
+"GCCC_MO_S41-06-MAN-047-17.0_anexo B Núcleo RUTA Procedimientos específicos.pdf": "https://drive.google.com/uc?id=15te0uTKPcvszMXuIwqAKCyY1KwS5gYet",
+"GCCC_MO_S41-06-MAN-047-17.0_anexo Z Planes de Respuesta ante Emergencia (ERP).pdf": "https://drive.google.com/uc?id=1jPyitXCSzHAR6JB70mDf1VzP_4iBJpU1",
+"GCCC_MO_S41-06-MAN-047-17.0_anexo B Núcleo TMA Procedimientos específicos.pdf": "https://drive.google.com/uc?id=1YvQQQoLz4xBhWz2FeMytAmX_zBDIcSLw",
+"GCCC_MO_S41-06-MAN-047-17.0_anexo A Procedimientos generales.pdf": "https://drive.google.com/uc?id=1WnNgPSQjBdlfv8pp0Q2XRMy2DoB6vuXk",
+"CIT Integración de la vigilancia ADS-B en el sistema de vigilancia ATS de SACTA 4.0.pdf": "https://drive.google.com/uc?id=1uib4RcP-jTzDaBWPQMYnKpyFsVneMI3c",
+"libro_completo_feb2019_v1_-_web.pdf": "https://drive.google.com/uc?id=1x9ymoqZBZaQMn0f5TTO87v4ovTlKloD2",
+
 }
 
-def extraer_texto_pdf(pdf_url):
-    """Descarga un PDF, extrae texto con pdfplumber o usa OCR si es una imagen."""
-    response = requests.get(pdf_url, timeout=10)
-    if response.status_code != 200:
-        return None
-
-    pdf_file = io.BytesIO(response.content)
-    texto_extraido = ""
-
-    # Intentar extraer texto con pdfplumber
-    with pdfplumber.open(pdf_file) as pdf:
-        for page in pdf.pages:
-            text = page.extract_text()
-            if text:
-                texto_extraido += text + "\n"
-
-    # Si no se encontró texto, usar OCR
-    if not texto_extraido.strip():
-        images = convert_from_bytes(pdf_file.read())
-        for img in images:
-            texto_extraido += pytesseract.image_to_string(img) + "\n"
-
-    return texto_extraido.strip()
+def descargar_pdf_drive(pdf_url):
+    """Descarga un PDF desde Google Drive usando gdown."""
+    pdf_bytes = io.BytesIO()
+    gdown.download(pdf_url, pdf_bytes, quiet=False)
+    pdf_bytes.seek(0)
+    return pdf_bytes
 
 @app.route("/procesar_pdf", methods=["POST"])
 def procesar_pdf():
@@ -61,23 +72,24 @@ def procesar_pdf():
         query = data.get("query")
 
         if not aerodromo or not categoria or not query:
-            return jsonify({"error": "Faltan parámetros requeridos: aerodromo, categoria, query"}), 400
+            return jsonify({"error": "Faltan parámetros requeridos"}), 400
 
-        clave_pdf = f"{categoria}_{pista}" if pista else categoria
-        pdf_url = AIP_URLS.get(aerodromo, {}).get(clave_pdf)
+        nombre_pdf = f"{aerodromo}_{categoria}_{pista}.pdf" if pista else f"{aerodromo}_{categoria}.pdf"
+        pdf_url = PDF_URLS.get(nombre_pdf)
 
         if not pdf_url:
-            return jsonify({"error": "No se encontró la URL del PDF para la consulta especificada."}), 404
+            return jsonify({"error": "No se encontró el PDF en Google Drive."}), 404
 
-        texto_pdf = extraer_texto_pdf(pdf_url)
-
-        if not texto_pdf:
-            return jsonify({"error": "No se pudo extraer texto del PDF."}), 500
+        pdf_file = descargar_pdf_drive(pdf_url)
+        if not pdf_file:
+            return jsonify({"error": "No se pudo descargar el PDF."}), 500
 
         resultados = []
-        clean_text = re.sub(r'\s+', ' ', texto_pdf.lower())  # Normalizar espacios
-        if query.lower() in clean_text:
-            resultados.append(f"Texto encontrado en el PDF: {clean_text[:500]}...")
+        with pdfplumber.open(pdf_file) as pdf:
+            for page_num, page in enumerate(pdf.pages):
+                text = page.extract_text()
+                if text and query.lower() in text.lower():
+                    resultados.append(f"Página {page_num + 1}: {text[:500]}...")
 
         if not resultados:
             return jsonify({"resultados": "No se encontraron coincidencias en el PDF."})
@@ -85,8 +97,7 @@ def procesar_pdf():
         return jsonify({"resumen": f"Se encontraron {len(resultados)} coincidencias.", "detalles": resultados})
 
     except Exception as e:
-        return jsonify({"error": f"Error al procesar el PDF: {str(e)}"}), 500
+        return jsonify({"error": str(e)}), 500
 
 if __name__ == "__main__":
-    port = int(os.environ.get("PORT", 5000))
-    app.run(host="0.0.0.0", port=port)
+    app.run(host="0.0.0.0", port=5000)
