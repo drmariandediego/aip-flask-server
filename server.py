@@ -65,36 +65,57 @@ def descargar_pdf_drive(pdf_url):
 @app.route("/procesar_pdf", methods=["POST"])
 def procesar_pdf():
     try:
+        print("📢 Nueva solicitud recibida")
+
+        # ✅ Verificar si la solicitud contiene JSON válido
+        if not request.is_json:
+            print("❌ Error: La solicitud no es JSON")
+            return jsonify({"error": "La solicitud debe ser JSON"}), 400
+        
         data = request.json
+        print(f"📄 JSON recibido: {data}")
+
         query = data.get("query")
 
-        if not aerodromo or not categoria or not query:
-            return jsonify({"error": "Faltan parámetros requeridos"}), 400
+        if not query:
+            print("❌ Error: Falta la palabra clave 'query'")
+            return jsonify({"error": "Debe proporcionar una palabra clave para buscar."}), 400
 
-        nombre_pdf = f"{aerodromo}_{categoria}_{pista}.pdf" if pista else f"{aerodromo}_{categoria}.pdf"
-        pdf_url = PDF_URLS.get(nombre_pdf)
+        print(f"🔍 Buscando: {query}")
 
-        if not pdf_url:
-            return jsonify({"error": "No se encontró el PDF en Google Drive."}), 404
+        resultados = {}
 
-        pdf_file = descargar_pdf_drive(pdf_url)
-        if not pdf_file:
-            return jsonify({"error": "No se pudo descargar el PDF."}), 500
+        # ✅ Buscar en TODOS los PDFs
+        for nombre_pdf, pdf_url in PDF_URLS.items():
+            print(f"📥 Descargando {nombre_pdf} desde {pdf_url}")
+            pdf_file = descargar_pdf_drive(pdf_url)
 
-        resultados = []
-        with pdfplumber.open(pdf_file) as pdf:
-            for page_num, page in enumerate(pdf.pages):
-                text = page.extract_text()
-                if text and query.lower() in text.lower():
-                    resultados.append(f"Página {page_num + 1}: {text[:500]}...")
+            if not pdf_file:
+                print(f"⚠ No se pudo descargar {nombre_pdf}")
+                continue
+
+            coincidencias = []
+            with pdfplumber.open(pdf_file) as pdf:
+                for page_num, page in enumerate(pdf.pages):
+                    text = page.extract_text()
+                    if text and query.lower() in text.lower():
+                        print(f"✅ Coincidencia en {nombre_pdf}, página {page_num + 1}")
+                        coincidencias.append(f"Página {page_num + 1}: {text[:500]}...")
+
+            if coincidencias:
+                resultados[nombre_pdf] = coincidencias
 
         if not resultados:
-            return jsonify({"resultados": "No se encontraron coincidencias en el PDF."})
+            print("❌ No se encontraron coincidencias en ningún PDF")
+            return jsonify({"resultados": "No se encontraron coincidencias en ningún PDF."})
 
-        return jsonify({"resumen": f"Se encontraron {len(resultados)} coincidencias.", "detalles": resultados})
+        print("✅ Envío de resultados exitoso")
+        return jsonify({"resumen": f"Se encontraron coincidencias en {len(resultados)} documentos.", "detalles": resultados})
 
     except Exception as e:
-        return jsonify({"error": str(e)}), 500
+        print(f"💥 Error interno del servidor: {e}")
+        return jsonify({"error": f"Error interno del servidor: {str(e)}"}), 500
+
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=5000)
