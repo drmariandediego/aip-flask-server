@@ -66,9 +66,6 @@ def descargar_pdf_drive(pdf_url):
 def procesar_pdf():
     try:
         data = request.json
-        aerodromo = data.get("aerodromo")
-        categoria = data.get("categoria")
-        pista = data.get("pista", "")
         query = data.get("query")
 
         if not aerodromo or not categoria or not query:
