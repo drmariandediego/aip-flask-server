@@ -1,3 +1,10 @@
+pip==25.0
+setuptools>=65.5.0
+wheel
+google-api-python-client==2.103.0
+google-auth==2.38.0
+google-auth-oauthlib==1.2.1
+google-auth-httplib2==0.2.0
 flask
 requests
 pdfplumber
@@ -14,7 +21,4 @@ google-auth-oauthlib
 google-auth-httplib2
 googleapiclient
 google-api-python-client
-google-auth
-google-auth-oauthlib
-google-auth-httplib2
 
