@@ -8,7 +8,6 @@ pdf2image
 pillow
 gdown
 gunicorn
-<<<<<<< HEAD
 Flask
 google-auth
 google-auth-oauthlib
