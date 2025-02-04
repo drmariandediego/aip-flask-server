@@ -8,3 +8,8 @@ pdf2image
 pillow
 gdown
 gunicorn
+Flask
+google-auth
+google-auth-oauthlib
+google-auth-httplib2
+googleapiclient
