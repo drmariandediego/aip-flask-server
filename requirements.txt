@@ -8,8 +8,14 @@ pdf2image
 pillow
 gdown
 gunicorn
+<<<<<<< HEAD
 Flask
 google-auth
 google-auth-oauthlib
 google-auth-httplib2
 googleapiclient
+google-api-python-client
+google-auth
+google-auth-oauthlib
+google-auth-httplib2
+
