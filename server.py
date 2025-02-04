@@ -2,11 +2,22 @@ from flask import Flask, request, jsonify
 import requests
 import io
 import pdfplumber
-import gdown
-from flask_cors import CORS  # Permite acceso desde GPT
+import os
+from google.oauth2 import service_account
+from googleapiclient.discovery import build
+from flask_cors import CORS
 
 app = Flask(__name__)
 CORS(app)
+
+# Autenticación con Google Drive API
+SCOPES = ["https://www.googleapis.com/auth/drive"]
+SERVICE_ACCOUNT_FILE = os.getenv("GOOGLE_APPLICATION_CREDENTIALS", "credentials.json")
+
+creds = service_account.Credentials.from_service_account_file(
+    SERVICE_ACCOUNT_FILE, scopes=SCOPES
+)
+drive_service = build("drive", "v3", credentials=creds)
 
 # 🔹 Reemplaza esta parte con la lista de enlaces generados en Google Colab 🔹
 PDF_URLS = {
