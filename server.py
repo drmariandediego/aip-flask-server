@@ -71,73 +71,56 @@ PDF_URLS = {
 
 }
 
-def descargar_pdf_drive(pdf_url):
-    """Descarga un PDF desde Google Drive usando gdown."""
-    pdf_bytes = io.BytesIO()
-    gdown.download(pdf_url, pdf_bytes, quiet=False)
-    pdf_bytes.seek(0)
-    return pdf_bytes
-
 @app.route("/procesar_pdf", methods=["POST"])
 def procesar_pdf():
+    data = request.get_json()
+    query = data.get("query", "").lower().strip()
+
+    print(f"📢 Nueva solicitud recibida")
+    print(f"📄 JSON recibido: {data}")
+    print(f"🔍 Buscando en PDFs: {query}")
+
+    # 🔹 Paso 1: Identificar el PDF más relevante
+    pdf_to_analyze = None
+    for pdf_name in PDF_URLS:
+        if query in pdf_name.lower():  # Coincidencia en el nombre del archivo
+            pdf_to_analyze = pdf_name
+            break
+
+    if not pdf_to_analyze:
+        return jsonify({"error": "No se encontró un PDF relevante para la consulta"}), 404
+
+    print(f"📥 Descargando {pdf_to_analyze} desde {PDF_URLS[pdf_to_analyze]}")
+
+    # 🔹 Paso 2: Descargar el PDF temporalmente
+    pdf_path = "/tmp/temp.pdf"
+    
     try:
-        print("📢 Nueva solicitud recibida")
+        gdown.download(PDF_URLS[pdf_to_analyze], pdf_path, quiet=False)
+    except Exception as e:
+        print(f"❌ Error al descargar el PDF: {e}")
+        return jsonify({"error": "Error al descargar el PDF"}), 500
 
-        if not request.is_json:
-            print("❌ Error: La solicitud no es JSON")
-            return jsonify({"error": "La solicitud debe ser JSON"}), 400
-        
-        data = request.json
-        print(f"📄 JSON recibido: {data}")
-
-        query = data.get("query")
-
-        if not query:
-            print("❌ Error: Falta la palabra clave 'query'")
-            return jsonify({"error": "Debe proporcionar una palabra clave para buscar."}), 400
-
-        print(f"🔍 Buscando: {query}")
-
-        resultados = {}
-
-        for nombre_pdf, pdf_url in PDF_URLS.items():
-            print(f"📥 Descargando {nombre_pdf} desde {pdf_url}")
-            pdf_file = descargar_pdf_drive(pdf_url)
-
-            if not pdf_file:
-                print(f"⚠ No se pudo descargar {nombre_pdf}")
-                continue
-
-            print(f"📂 Intentando abrir {nombre_pdf} con pdfplumber")
-            try:
-                with pdfplumber.open(pdf_file) as pdf:
-                    print(f"✅ PDF abierto correctamente: {nombre_pdf}")
-
-                    coincidencias = []
-                    for page_num, page in enumerate(pdf.pages):
-                        text = page.extract_text()
-                        if text and query.lower() in text.lower():
-                            print(f"✅ Coincidencia en {nombre_pdf}, página {page_num + 1}")
-                            coincidencias.append(f"Página {page_num + 1}: {text[:500]}...")
-
-                if coincidencias:
-                    resultados[nombre_pdf] = coincidencias
-            except Exception as pdf_error:
-                print(f"💥 ERROR en pdfplumber: {pdf_error}")
-                return jsonify({"error": f"Fallo al leer el PDF: {str(pdf_error)}"}), 500
-
-        if not resultados:
-            print("❌ No se encontraron coincidencias en ningún PDF")
-            return jsonify({"resultados": "No se encontraron coincidencias en ningún PDF."})
-
-        print("✅ Envío de resultados exitoso")
-        return jsonify({"resumen": f"Se encontraron coincidencias en {len(resultados)} documentos.", "detalles": resultados})
+    # 🔹 Paso 3: Extraer texto del PDF
+    extracted_text = ""
+    try:
+        with pdfplumber.open(pdf_path) as pdf:
+            for page in pdf.pages:
+                page_text = page.extract_text()
+                if page_text:
+                    extracted_text += page_text + "\n"
 
     except Exception as e:
-        print(f"💥 ERROR GENERAL en el servidor: {e}")
-        return jsonify({"error": f"Error interno del servidor: {str(e)}"}), 500
+        print(f"❌ Error al procesar el PDF: {e}")
+        return jsonify({"error": "Error al procesar el PDF"}), 500
 
+    # 🔹 Paso 4: Devolver respuesta
+    if not extracted_text.strip():
+        return jsonify({"error": "No se pudo extraer texto del PDF"}), 500
 
+    print(f"✅ Texto extraído correctamente")
+    return jsonify({"respuesta": extracted_text})
 
+# 🔹 Iniciar servidor Flask
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=5000)
