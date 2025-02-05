@@ -71,6 +71,10 @@ PDF_URLS = {
 
 }
 
+@app.route("/", methods=["GET"])
+def home():
+    return jsonify({"message": "El servidor está funcionando correctamente"})
+
 @app.route("/procesar_pdf", methods=["POST"])
 def procesar_pdf():
     data = request.get_json()
