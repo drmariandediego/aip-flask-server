@@ -71,10 +71,6 @@ PDF_URLS = {
 
 }
 
-@app.route("/", methods=["GET"])
-def home():
-    return jsonify({"message": "El servidor está funcionando correctamente"})
-
 @app.route("/procesar_pdf", methods=["POST"])
 def procesar_pdf():
     data = request.get_json()
@@ -84,46 +80,40 @@ def procesar_pdf():
     print(f"📄 JSON recibido: {data}")
     print(f"🔍 Buscando en PDFs: {query}")
 
-    # 🔹 Paso 1: Identificar el PDF más relevante
-    pdf_to_analyze = None
-    for pdf_name in PDF_URLS:
-        if query in pdf_name.lower():  # Coincidencia en el nombre del archivo
-            pdf_to_analyze = pdf_name
-            break
+    resultados = []
 
-    if not pdf_to_analyze:
-        return jsonify({"error": "No se encontró un PDF relevante para la consulta"}), 404
+    for pdf_name, pdf_url in PDF_URLS.items():
+        print(f"📥 Descargando {pdf_name} desde {pdf_url}")
 
-    print(f"📥 Descargando {pdf_to_analyze} desde {PDF_URLS[pdf_to_analyze]}")
+        # Descargar el PDF temporalmente
+        pdf_path = "/tmp/temp.pdf"
+        try:
+            gdown.download(pdf_url, pdf_path, quiet=True)
+        except Exception as e:
+            print(f"❌ Error al descargar {pdf_name}: {e}")
+            continue
 
-    # 🔹 Paso 2: Descargar el PDF temporalmente
-    pdf_path = "/tmp/temp.pdf"
-    
-    try:
-        gdown.download(PDF_URLS[pdf_to_analyze], pdf_path, quiet=False)
-    except Exception as e:
-        print(f"❌ Error al descargar el PDF: {e}")
-        return jsonify({"error": "Error al descargar el PDF"}), 500
+        # Abrir con pdfplumber y buscar el texto
+        try:
+            with pdfplumber.open(pdf_path) as pdf:
+                for page_number, page in enumerate(pdf.pages):
+                    text = page.extract_text()
+                    if text and query in text.lower():
+                        resultados.append({
+                            "pdf": pdf_name,
+                            "pagina": page_number + 1,
+                            "contenido": text
+                        })
+                        break  # Detenerse si se encuentra el texto en el PDF
 
-    # 🔹 Paso 3: Extraer texto del PDF
-    extracted_text = ""
-    try:
-        with pdfplumber.open(pdf_path) as pdf:
-            for page in pdf.pages:
-                page_text = page.extract_text()
-                if page_text:
-                    extracted_text += page_text + "\n"
+        except Exception as e:
+            print(f"❌ Error al procesar {pdf_name}: {e}")
+            continue
 
-    except Exception as e:
-        print(f"❌ Error al procesar el PDF: {e}")
-        return jsonify({"error": "Error al procesar el PDF"}), 500
+    if resultados:
+        return jsonify({"resultados": resultados})
 
-    # 🔹 Paso 4: Devolver respuesta
-    if not extracted_text.strip():
-        return jsonify({"error": "No se pudo extraer texto del PDF"}), 500
-
-    print(f"✅ Texto extraído correctamente")
-    return jsonify({"respuesta": extracted_text})
+    return jsonify({"error": "No se encontró información relevante en los PDFs"}), 404
 
 # 🔹 Iniciar servidor Flask
 if __name__ == "__main__":
