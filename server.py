@@ -8,19 +8,14 @@ from google.oauth2 import service_account
 from googleapiclient.discovery import build
 from flask_cors import CORS
 
-import os
-from google.oauth2 import service_account
-
-# Obtiene la ruta del archivo de credenciales desde las variables de entorno
+# 🔹 Obtiene la ruta del archivo de credenciales desde las variables de entorno
 CREDENTIALS_PATH = os.getenv("GOOGLE_APPLICATION_CREDENTIALS", "credentials.json")
 
 if not os.path.exists(CREDENTIALS_PATH):
     raise FileNotFoundError(f"❌ No se encontró el archivo de credenciales en {CREDENTIALS_PATH}")
 
-# Carga las credenciales
+# 🔹 Carga las credenciales de Google
 creds = service_account.Credentials.from_service_account_file(CREDENTIALS_PATH)
-
-)
 
 # 🔹 Inicializa el servicio de Google Drive
 drive_service = build("drive", "v3", credentials=creds)
@@ -28,7 +23,6 @@ drive_service = build("drive", "v3", credentials=creds)
 # 🔹 Inicializa Flask
 app = Flask(__name__)
 CORS(app)
-
 
 # 🔹 Reemplaza esta parte con la lista de enlaces generados en Google Colab 🔹
 PDF_URLS = {
