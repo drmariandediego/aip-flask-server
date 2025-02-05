@@ -8,16 +8,18 @@ from google.oauth2 import service_account
 from googleapiclient.discovery import build
 from flask_cors import CORS
 
-# 🔹 Ruta del archivo de credenciales en Render
-CREDENTIALS_PATH = "/app/credentials.json"
+import os
+from google.oauth2 import service_account
 
-# 🔹 Verifica si el archivo de credenciales existe
+# Obtiene la ruta del archivo de credenciales desde las variables de entorno
+CREDENTIALS_PATH = os.getenv("GOOGLE_APPLICATION_CREDENTIALS", "credentials.json")
+
 if not os.path.exists(CREDENTIALS_PATH):
     raise FileNotFoundError(f"❌ No se encontró el archivo de credenciales en {CREDENTIALS_PATH}")
 
-# 🔹 Carga las credenciales desde el archivo
-creds = service_account.Credentials.from_service_account_file(
-    CREDENTIALS_PATH, scopes=["https://www.googleapis.com/auth/drive"]
+# Carga las credenciales
+creds = service_account.Credentials.from_service_account_file(CREDENTIALS_PATH)
+
 )
 
 # 🔹 Inicializa el servicio de Google Drive
