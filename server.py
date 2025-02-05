@@ -85,30 +85,31 @@ def procesar_pdf():
     for pdf_name, pdf_url in PDF_URLS.items():
         print(f"📥 Descargando {pdf_name} desde {pdf_url}")
 
-        # Descargar el PDF temporalmente
-        pdf_path = "/tmp/temp.pdf"
-        try:
-            gdown.download(pdf_url, pdf_path, quiet=True)
-        except Exception as e:
-            print(f"❌ Error al descargar {pdf_name}: {e}")
-            continue
+        # 🔹 Descarga solo si es relevante
+        if query in pdf_name.lower():  
+            pdf_path = "/tmp/temp.pdf"
+            try:
+                gdown.download(pdf_url, pdf_path, quiet=True)
+            except Exception as e:
+                print(f"❌ Error al descargar {pdf_name}: {e}")
+                continue
 
-        # Abrir con pdfplumber y buscar el texto
-        try:
-            with pdfplumber.open(pdf_path) as pdf:
-                for page_number, page in enumerate(pdf.pages):
-                    text = page.extract_text()
-                    if text and query in text.lower():
-                        resultados.append({
-                            "pdf": pdf_name,
-                            "pagina": page_number + 1,
-                            "contenido": text
-                        })
-                        break  # Detenerse si se encuentra el texto en el PDF
+            # 🔹 Abrir con pdfplumber y buscar el texto
+            try:
+                with pdfplumber.open(pdf_path) as pdf:
+                    for page_number, page in enumerate(pdf.pages):
+                        text = page.extract_text()
+                        if text and query in text.lower():
+                            resultados.append({
+                                "pdf": pdf_name,
+                                "pagina": page_number + 1,
+                                "contenido": text[:500]  # Muestra solo 500 caracteres
+                            })
+                            break  # Detenerse si se encuentra el texto
 
-        except Exception as e:
-            print(f"❌ Error al procesar {pdf_name}: {e}")
-            continue
+            except Exception as e:
+                print(f"❌ Error al procesar {pdf_name}: {e}")
+                continue
 
     if resultados:
         return jsonify({"resultados": resultados})
